@@ -14,6 +14,8 @@
 		AD9368051CA6B20A00440020 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AD9368031CA6B20A00440020 /* LaunchScreen.storyboard */; };
 		AD9368101CA6B20A00440020 /* FAMCalendarViewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD93680F1CA6B20A00440020 /* FAMCalendarViewTests.swift */; };
 		AD93681B1CA6B20A00440020 /* FAMCalendarViewUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD93681A1CA6B20A00440020 /* FAMCalendarViewUITests.swift */; };
+		AD93682B1CA6B28A00440020 /* FAMCalendarViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD93682A1CA6B28A00440020 /* FAMCalendarViewController.swift */; };
+		AD93682D1CA6B8A400440020 /* FAMAlbumViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD93682C1CA6B8A400440020 /* FAMAlbumViewCell.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -47,6 +49,8 @@
 		AD9368161CA6B20A00440020 /* FAMCalendarViewUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FAMCalendarViewUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		AD93681A1CA6B20A00440020 /* FAMCalendarViewUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FAMCalendarViewUITests.swift; sourceTree = "<group>"; };
 		AD93681C1CA6B20A00440020 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		AD93682A1CA6B28A00440020 /* FAMCalendarViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FAMCalendarViewController.swift; sourceTree = "<group>"; };
+		AD93682C1CA6B8A400440020 /* FAMAlbumViewCell.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FAMAlbumViewCell.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -77,6 +81,7 @@
 		AD9367EE1CA6B20900440020 = {
 			isa = PBXGroup;
 			children = (
+				AD9368291CA6B26B00440020 /* Classes */,
 				AD9367F91CA6B20900440020 /* FAMCalendarView */,
 				AD93680E1CA6B20A00440020 /* FAMCalendarViewTests */,
 				AD9368191CA6B20A00440020 /* FAMCalendarViewUITests */,
@@ -103,6 +108,7 @@
 				AD9368011CA6B20900440020 /* Assets.xcassets */,
 				AD9368031CA6B20A00440020 /* LaunchScreen.storyboard */,
 				AD9368061CA6B20A00440020 /* Info.plist */,
+				AD93682C1CA6B8A400440020 /* FAMAlbumViewCell.swift */,
 			);
 			path = FAMCalendarView;
 			sourceTree = "<group>";
@@ -123,6 +129,14 @@
 				AD93681C1CA6B20A00440020 /* Info.plist */,
 			);
 			path = FAMCalendarViewUITests;
+			sourceTree = "<group>";
+		};
+		AD9368291CA6B26B00440020 /* Classes */ = {
+			isa = PBXGroup;
+			children = (
+				AD93682A1CA6B28A00440020 /* FAMCalendarViewController.swift */,
+			);
+			path = Classes;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -256,6 +270,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AD93682B1CA6B28A00440020 /* FAMCalendarViewController.swift in Sources */,
+				AD93682D1CA6B8A400440020 /* FAMAlbumViewCell.swift in Sources */,
 				AD9367FD1CA6B20900440020 /* ViewController.swift in Sources */,
 				AD9367FB1CA6B20900440020 /* AppDelegate.swift in Sources */,
 			);
@@ -403,7 +419,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				INFOPLIST_FILE = FAMCalendarView/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
-				PRODUCT_BUNDLE_IDENTIFIER = me.fromkk.FAMCalendarView;
+				PRODUCT_BUNDLE_IDENTIFIER = info.fromkk.FAMCalendarView;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
@@ -414,7 +430,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				INFOPLIST_FILE = FAMCalendarView/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
-				PRODUCT_BUNDLE_IDENTIFIER = me.fromkk.FAMCalendarView;
+				PRODUCT_BUNDLE_IDENTIFIER = info.fromkk.FAMCalendarView;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;
