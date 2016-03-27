@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		AD5C267E1CA80A4800C2CDCC /* NSDate+FAMCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD5C267D1CA80A4800C2CDCC /* NSDate+FAMCalendarView.swift */; };
 		AD9367FB1CA6B20900440020 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD9367FA1CA6B20900440020 /* AppDelegate.swift */; };
 		AD9367FD1CA6B20900440020 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD9367FC1CA6B20900440020 /* ViewController.swift */; };
 		AD9368001CA6B20900440020 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AD9367FE1CA6B20900440020 /* Main.storyboard */; };
@@ -36,6 +37,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		AD5C267D1CA80A4800C2CDCC /* NSDate+FAMCalendarView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "NSDate+FAMCalendarView.swift"; sourceTree = "<group>"; };
 		AD9367F71CA6B20900440020 /* FAMCalendarView.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FAMCalendarView.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		AD9367FA1CA6B20900440020 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		AD9367FC1CA6B20900440020 /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
@@ -135,6 +137,7 @@
 			isa = PBXGroup;
 			children = (
 				AD93682A1CA6B28A00440020 /* FAMCalendarViewController.swift */,
+				AD5C267D1CA80A4800C2CDCC /* NSDate+FAMCalendarView.swift */,
 			);
 			path = Classes;
 			sourceTree = "<group>";
@@ -270,6 +273,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AD5C267E1CA80A4800C2CDCC /* NSDate+FAMCalendarView.swift in Sources */,
 				AD93682B1CA6B28A00440020 /* FAMCalendarViewController.swift in Sources */,
 				AD93682D1CA6B8A400440020 /* FAMAlbumViewCell.swift in Sources */,
 				AD9367FD1CA6B20900440020 /* ViewController.swift in Sources */,
@@ -500,6 +504,7 @@
 				AD9368211CA6B20A00440020 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		AD9368221CA6B20A00440020 /* Build configuration list for PBXNativeTarget "FAMCalendarViewTests" */ = {
 			isa = XCConfigurationList;
@@ -508,6 +513,7 @@
 				AD9368241CA6B20A00440020 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		AD9368251CA6B20A00440020 /* Build configuration list for PBXNativeTarget "FAMCalendarViewUITests" */ = {
 			isa = XCConfigurationList;
@@ -516,6 +522,7 @@
 				AD9368271CA6B20A00440020 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
