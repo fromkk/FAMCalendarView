@@ -329,6 +329,11 @@ public class FAMCalendarViewController :UIViewController
     lazy private var _contentInset :UIEdgeInsets = {
         return UIEdgeInsets(top: UIApplication.sharedApplication().statusBarFrame.height + (self.navigationController?.navigationBar.frame.height ?? 0.0), left: 0.0, bottom: 0.0, right: 0.0)
     }()
+    lazy public var contentView :UIView = {
+        let result :UIView = UIView()
+        result.backgroundColor = UIColor.clearColor()
+        return result
+    }()
     
     init(withDate date :NSDate)
     {
@@ -349,7 +354,8 @@ public class FAMCalendarViewController :UIViewController
         
         self.currentCalendarView = self.calendarView(withDate: self.date)
         self.view.backgroundColor = UIColor.whiteColor()
-        self.view.addSubview(self.currentCalendarView!)
+        self.view.addSubview(self.contentView)
+        self.contentView.addSubview(self.currentCalendarView!)
         self.view.addGestureRecognizer(self.leftSwipeGesture)
         self.view.addGestureRecognizer(self.rightSwipeGesture)
     }
@@ -357,6 +363,7 @@ public class FAMCalendarViewController :UIViewController
     public override func viewWillLayoutSubviews() {
         super.viewWillLayoutSubviews()
         
+        self.contentView.frame = self.view.bounds
         self.currentCalendarView?.frame = self.view.bounds
     }
     
@@ -385,17 +392,17 @@ public class FAMCalendarViewController :UIViewController
     public func back(animated :Bool)
     {
         let calendarView :FAMCalendarView = self.calendarView(withDate: NSDate.date(fromYear: self.currentCalendarView!.year, month: self.currentCalendarView!.month - 1, day: 1))
-        self.view.addSubview(calendarView)
+        self.contentView.addSubview(calendarView)
         if animated
         {
             calendarView.frame = self.view.bounds
             calendarView.frame.origin.x = -calendarView.frame.size.width
             UIView.animateWithDuration(0.33, animations: {
-                var moveFrame :CGRect = self.view.frame
+                var moveFrame :CGRect = self.view.bounds
                 moveFrame.origin.x = moveFrame.size.width
-                self.view.frame = moveFrame
+                self.contentView.frame = moveFrame
             }, completion: { (finished :Bool) in
-                self.view.frame.origin.x = 0.0
+                self.contentView.frame.origin.x = 0.0
                 self.currentCalendarView?.removeFromSuperview()
                 self.currentCalendarView = calendarView
                 self.currentCalendarView?.frame = self.view.bounds
@@ -410,17 +417,17 @@ public class FAMCalendarViewController :UIViewController
     public func forward(animated :Bool)
     {
         let calendarView :FAMCalendarView = self.calendarView(withDate: NSDate.date(fromYear: self.currentCalendarView!.year, month: self.currentCalendarView!.month + 1, day: 1))
-        self.view.addSubview(calendarView)
+        self.contentView.addSubview(calendarView)
         if animated
         {
             calendarView.frame = self.view.bounds
             calendarView.frame.origin.x = calendarView.frame.size.width
             UIView.animateWithDuration(0.33, animations: {
-                var moveFrame :CGRect = self.view.frame
+                var moveFrame :CGRect = self.view.bounds
                 moveFrame.origin.x = -moveFrame.size.width
-                self.view.frame = moveFrame
+                self.contentView.frame = moveFrame
             }, completion: { (finished :Bool) in
-                self.view.frame.origin.x = 0.0
+                self.contentView.frame.origin.x = 0.0
                 self.currentCalendarView?.removeFromSuperview()
                 self.currentCalendarView = calendarView
                 self.currentCalendarView?.frame = self.view.bounds
