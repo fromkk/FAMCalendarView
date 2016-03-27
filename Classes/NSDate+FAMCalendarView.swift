@@ -13,6 +13,7 @@ public protocol NSDateFAMCalendarViewProtocol
     func dateFromIndexPath(indexPath :NSIndexPath) -> NSDate?
     func day() -> Int
     func isEqual(toYear year :Int, month :Int) -> Bool
+    func formatedString(format :String) -> String
     static func date(fromYear year :Int, month :Int, day :Int) -> NSDate
 }
 
@@ -45,6 +46,14 @@ extension NSDate :NSDateFAMCalendarViewProtocol
         calendar.timeZone = NSTimeZone.systemTimeZone()
         let components :NSDateComponents = calendar.components([.Year, .Month], fromDate: self)
         return components.year == year && components.month == month
+    }
+    
+    public func formatedString(format: String) -> String {
+        let formatter :NSDateFormatter = NSDateFormatter()
+        formatter.locale = NSLocale.systemLocale()
+        formatter.timeZone = NSTimeZone.systemTimeZone()
+        formatter.dateFormat = format
+        return formatter.stringFromDate(self)
     }
     
     public static func date(fromYear year :Int, month :Int, day :Int) -> NSDate {

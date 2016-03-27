@@ -10,11 +10,13 @@ import UIKit
 import Photos
 import PhotosUI
 
-class ViewController: UIViewController, UICollectionViewDelegate, UICollectionViewDataSource {
+class ViewController: UIViewController, UICollectionViewDelegate, UICollectionViewDataSource, FAMCalendarViewDataSource, FAMCalendarViewDelegate {
 
     let numberOfRows :CGFloat = 4.0
     let cellIdentifier :String = "cellIdentifier"
     var fetchResult :PHFetchResult?
+    var dateAssets :Dictionary<String, UIImage> = [:]
+    var dateIndexes :Dictionary<String, Int> = [:]
     
     lazy var layout :UICollectionViewFlowLayout = {
         let result :UICollectionViewFlowLayout = UICollectionViewFlowLayout()
@@ -91,6 +93,24 @@ class ViewController: UIViewController, UICollectionViewDelegate, UICollectionVi
         }
         
         self.fetchResult = PHAsset.fetchAssetsInAssetCollection(cameraRollCollection, options: nil)
+        self.fetchResult?.enumerateObjectsUsingBlock { object, index, stop in
+            let asset :PHAsset? = object as? PHAsset
+            guard let creationDate :NSDate = asset?.creationDate else
+            {
+                return
+            }
+            let dateString :String = creationDate.formatedString("yyyyMMdd")
+            if let _ :UIImage = self.dateAssets[dateString]
+            {
+                return
+            }
+            
+            if nil != asset
+            {
+                self.loadImage(dateString, asset: asset!)
+                self.dateIndexes[dateString] = index
+            }
+        }
         if NSThread.isMainThread()
         {
             self.collectionView.reloadData()
@@ -106,11 +126,21 @@ class ViewController: UIViewController, UICollectionViewDelegate, UICollectionVi
         }
     }
     
+    func loadImage(dateString :String, asset :PHAsset)
+    {
+        let size :CGSize = CGSize(width: self.view.frame.width / 7.0, height: self.view.frame.width / 7.0)
+        PHImageManager.defaultManager().requestImageForAsset(asset, targetSize: size, contentMode: PHImageContentMode.AspectFill, options: nil) { (image, info) in
+            self.dateAssets[dateString] = image
+        }
+    }
+    
     //MARK: events
     
     func onSearchButtonDidTapped(button :UIBarButtonItem)
     {
         let calendarViewController :FAMCalendarViewController = FAMCalendarViewController(withDate: NSDate())
+        calendarViewController.dataSource = self
+        calendarViewController.delegate = self
         let navigationController :UINavigationController = UINavigationController(rootViewController: calendarViewController)
         self.presentViewController(navigationController, animated: true, completion: nil)
     }
@@ -149,6 +179,27 @@ class ViewController: UIViewController, UICollectionViewDelegate, UICollectionVi
         PHImageManager.defaultManager().requestImageForAsset(asset, targetSize: self.itemSize(), contentMode: .AspectFill, options: nil, resultHandler: { (image :UIImage?, info :[NSObject : AnyObject]?) in
             configureCell.imageView.image = image
         })
+    }
+    
+    //MARK: FAMCalendarViewDataSource
+    func imageForCalendarView(calendarView: FAMCalendarView, atDate date: NSDate) -> UIImage? {
+        let dateString :String = date.formatedString("yyyyMMdd")
+        guard let image :UIImage = self.dateAssets[dateString] else
+        {
+            return nil
+        }
+        
+        return image
+    }
+    
+    //MARK: FAMCalendarViewDelegate
+    func calendarView(calendarView: FAMCalendarView, didSelectedDate date: NSDate) {
+        let dateString :String = date.formatedString("yyyyMMdd")
+        if let index :Int = self.dateIndexes[dateString]
+        {
+            let indexPath :NSIndexPath = NSIndexPath(forRow: index, inSection: 0)
+            self.collectionView.scrollToItemAtIndexPath(indexPath, atScrollPosition: .Top, animated: true)
+        }
     }
 }
 

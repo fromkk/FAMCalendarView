@@ -8,11 +8,14 @@
 
 import UIKit
 
-//MARK: NSDate extention
-
-public protocol FAMCalendarViewDataSource
+public protocol FAMCalendarViewDataSource : class
 {
-    func imageForCalendarView(calendarView :FAMCalendarView, atDate date :NSDate) -> UIImage
+    func imageForCalendarView(calendarView :FAMCalendarView, atDate date :NSDate) -> UIImage?
+}
+
+public protocol FAMCalendarViewDelegate : class
+{
+    func calendarView(calendarView :FAMCalendarView, didSelectedDate date :NSDate) -> Void
 }
 
 //MARK: FAMCalendarHeaderView
@@ -92,6 +95,14 @@ public class FAMCalendarHeaderView :UICollectionReusableView
         self.backButton.frame = CGRect(x: horizontalMargin, y: (self.frame.size.height - 20.0) / 2.0, width: 20.0, height: 20.0)
         self.forwardButton.frame = CGRect(x: self.frame.size.width - horizontalMargin - 20.0, y: (self.frame.size.height - 20.0) / 2.0, width: 20.0, height: 20.0)
     }
+    
+    deinit
+    {
+        self.yearLabel.removeFromSuperview()
+        self.monthLabel.removeFromSuperview()
+        self.backButton.removeFromSuperview()
+        self.forwardButton.removeFromSuperview()
+    }
 }
 
 //MARK: FAMCalendarViewCell
@@ -155,6 +166,12 @@ public class FAMCalendarViewCell :UICollectionViewCell
         self.imageView.frame = self.bounds
         self.dateLabel.frame = self.bounds
     }
+    
+    deinit
+    {
+        self.imageView.removeFromSuperview()
+        self.dateLabel.removeFromSuperview()
+    }
 }
 
 public class FAMCalendarViewLayout :UICollectionViewFlowLayout
@@ -214,10 +231,12 @@ public class FAMCalendarView :UICollectionView, UICollectionViewDelegate, UIColl
             self.month = comp2.month
         }
     }
-    public var calendarDataSource :FAMCalendarViewDataSource?
+    public weak var calendarDataSource :FAMCalendarViewDataSource?
+    public weak var calendarDelegate :FAMCalendarViewDelegate?
     
     public var back :(() -> Void)?
     public var forward :(() -> Void)?
+    public var didSelect :(() -> Void)?
     
     lazy var calendarHeaderView :FAMCalendarHeaderView = {
         let result :FAMCalendarHeaderView = FAMCalendarHeaderView()
@@ -266,9 +285,9 @@ public class FAMCalendarView :UICollectionView, UICollectionViewDelegate, UIColl
         if let currentDate = self.date?.dateFromIndexPath(indexPath)
         {
             cell.dateLabel.text = "\(currentDate.day())"
-            cell.imageView.image = self.calendarDataSource?.imageForCalendarView(self, atDate: currentDate)
             cell.active = currentDate.isEqual(toYear: self.year, month: self.month)
             
+            cell.imageView.image = cell.active ? self.calendarDataSource?.imageForCalendarView(self, atDate: currentDate) : nil
         }
         return cell
     }
@@ -292,6 +311,15 @@ public class FAMCalendarView :UICollectionView, UICollectionViewDelegate, UIColl
         }
     }
     
+    public func collectionView(collectionView: UICollectionView, didSelectItemAtIndexPath indexPath: NSIndexPath) {
+        if let currentDate = self.date?.dateFromIndexPath(indexPath)
+        {
+            self.calendarDelegate?.calendarView(self, didSelectedDate: currentDate)
+        }
+        
+        self.didSelect?()
+    }
+    
     //MARK: events
     func onBackButtonDidTapped(button :UIButton)
     {
@@ -302,13 +330,21 @@ public class FAMCalendarView :UICollectionView, UICollectionViewDelegate, UIColl
     {
         self.forward?()
     }
+    
+    deinit
+    {
+        self.calendarDataSource = nil
+        self.calendarDelegate = nil
+        self.delegate = nil
+        self.dataSource = nil
+    }
 }
 
 public class FAMCalendarViewController :UIViewController
 {
     public var date :NSDate
     
-    lazy private var closeButton :UIBarButtonItem = {
+    lazy private var closeButton :UIBarButtonItem = { [weak self] in
         let result :UIBarButtonItem = UIBarButtonItem(barButtonSystemItem: .Stop, target: self, action: #selector(FAMCalendarViewController.onCloseButtonDidTapped(_:)))
         return result
     }()
@@ -316,18 +352,21 @@ public class FAMCalendarViewController :UIViewController
     private var currentCalendarView :FAMCalendarView?
     private var lastPoint :CGPoint?
     
-    lazy private var leftSwipeGesture :UISwipeGestureRecognizer = {
+    public weak var dataSource :FAMCalendarViewDataSource?
+    public weak var delegate :FAMCalendarViewDelegate?
+    
+    lazy private var leftSwipeGesture :UISwipeGestureRecognizer = { [weak self] in
         let result :UISwipeGestureRecognizer = UISwipeGestureRecognizer(target: self, action: #selector(FAMCalendarViewController.onSwipeGestureDidReceived(_:)))
         result.direction = .Left
         return result
     }()
-    lazy private var rightSwipeGesture :UISwipeGestureRecognizer = {
+    lazy private var rightSwipeGesture :UISwipeGestureRecognizer = { [weak self] in
         let result :UISwipeGestureRecognizer = UISwipeGestureRecognizer(target: self, action: #selector(FAMCalendarViewController.onSwipeGestureDidReceived(_:)))
         result.direction = .Right
         return result
     }()
-    lazy private var _contentInset :UIEdgeInsets = {
-        return UIEdgeInsets(top: UIApplication.sharedApplication().statusBarFrame.height + (self.navigationController?.navigationBar.frame.height ?? 0.0), left: 0.0, bottom: 0.0, right: 0.0)
+    lazy private var _contentInset :UIEdgeInsets = { [weak self] in
+        return UIEdgeInsets(top: UIApplication.sharedApplication().statusBarFrame.height + (self?.navigationController?.navigationBar.frame.height ?? 0.0), left: 0.0, bottom: 0.0, right: 0.0)
     }()
     lazy public var contentView :UIView = {
         let result :UIView = UIView()
@@ -368,9 +407,14 @@ public class FAMCalendarViewController :UIViewController
     }
     
     //MARK: events
-    public func onCloseButtonDidTapped(button :UIBarButtonItem)
+    public func onCloseButtonDidTapped(button :UIBarButtonItem?)
     {
-        self.dismissViewControllerAnimated(true, completion: nil)
+        self.dismissViewControllerAnimated(true, completion: {
+            self.currentCalendarView?.removeFromSuperview()
+            self.currentCalendarView = nil
+            self.dataSource = nil
+            self.delegate = nil
+        })
     }
     
     public func onSwipeGestureDidReceived(gesture :UISwipeGestureRecognizer)
@@ -410,6 +454,9 @@ public class FAMCalendarViewController :UIViewController
         } else
         {
             self.currentCalendarView?.removeFromSuperview()
+            self.currentCalendarView?.delegate = nil
+            self.currentCalendarView?.dataSource = nil
+            self.currentCalendarView = nil
             self.currentCalendarView = calendarView
         }
     }
@@ -435,6 +482,9 @@ public class FAMCalendarViewController :UIViewController
         } else
         {
             self.currentCalendarView?.removeFromSuperview()
+            self.currentCalendarView?.delegate = nil
+            self.currentCalendarView?.dataSource = nil
+            self.currentCalendarView = nil
             self.currentCalendarView = calendarView
         }
     }
@@ -445,12 +495,28 @@ public class FAMCalendarViewController :UIViewController
         let result :FAMCalendarView = FAMCalendarView(frame: self.view.bounds, collectionViewLayout: FAMCalendarViewLayout())
         result.date = date
         result.contentInset = self._contentInset
+        result.calendarDataSource = self.dataSource
+        result.calendarDelegate = self.delegate
         result.back = {
             self.back(true)
         }
         result.forward = {
             self.forward(true)
         }
+        result.didSelect = {
+            self.onCloseButtonDidTapped(nil)
+        }
         return result
+    }
+    
+    //MARK: deinit
+    deinit
+    {
+        self.currentCalendarView?.removeFromSuperview()
+        self.currentCalendarView = nil
+        self.contentView.removeFromSuperview()
+        self.navigationItem.leftBarButtonItems = nil
+        self.dataSource = nil
+        self.delegate = nil
     }
 }
