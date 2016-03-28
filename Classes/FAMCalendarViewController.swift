@@ -8,6 +8,9 @@
 
 import UIKit
 
+public typealias FAMCalendarViewBlocks = (() -> Void)
+public typealias FAMCalendarViewCompletionBlocks = ((completion: FAMCalendarViewBlocks) -> Void)
+
 public protocol FAMCalendarViewDataSource : class
 {
     func imageForCalendarView(calendarView :FAMCalendarView, atDate date :NSDate) -> UIImage?
@@ -41,16 +44,16 @@ public class FAMCalendarHeaderView :UICollectionReusableView
         result.lineBreakMode = NSLineBreakMode.ByWordWrapping
         return result
     }()
-    lazy var backButton :UIButton = {
+    lazy var prevButton :UIButton = {
         let button :UIButton = UIButton(type: .Custom)
-        button.setTitle("<", forState: .Normal)
-        button.setTitleColor(UIColor.blueColor(), forState: .Normal)
+        button.setImage(UIImage(named: "bt_prev"), forState: .Normal)
+        button.imageView?.contentMode = .Center
         return button
     }()
     lazy var forwardButton :UIButton = {
         let button :UIButton = UIButton(type: .Custom)
-        button.setTitle(">", forState: .Normal)
-        button.setTitleColor(UIColor.blueColor(), forState: .Normal)
+        button.setImage(UIImage(named: "bt_forward"), forState: .Normal)
+        button.imageView?.contentMode = .Center
         return button
     }()
     var didSet :Bool = false
@@ -77,7 +80,7 @@ public class FAMCalendarHeaderView :UICollectionReusableView
         didSet = true
         self.addSubview(self.yearLabel)
         self.addSubview(self.monthLabel)
-        self.addSubview(self.backButton)
+        self.addSubview(self.prevButton)
         self.addSubview(self.forwardButton)
     }
     
@@ -91,21 +94,68 @@ public class FAMCalendarHeaderView :UICollectionReusableView
         let totalHeight :CGFloat = yearSize.height + verticalMergin + monthSize.height
         self.yearLabel.frame = CGRect(x: horizontalMargin, y: (self.frame.size.height - totalHeight) / 2.0, width: self.frame.size.width - horizontalMargin * 2.0, height: yearSize.height)
         self.monthLabel.frame = CGRect(x: horizontalMargin, y: self.yearLabel.frame.maxY + verticalMergin, width: self.frame.size.width - horizontalMargin * 2.0, height: monthSize.height)
-        
-        self.backButton.frame = CGRect(x: horizontalMargin, y: (self.frame.size.height - 20.0) / 2.0, width: 20.0, height: 20.0)
-        self.forwardButton.frame = CGRect(x: self.frame.size.width - horizontalMargin - 20.0, y: (self.frame.size.height - 20.0) / 2.0, width: 20.0, height: 20.0)
+
+        let buttonSize :CGSize = CGSize(width: 40.0, height: 40.0)
+        self.prevButton.frame = CGRect(x: horizontalMargin, y: (self.frame.size.height - buttonSize.height) / 2.0, width: buttonSize.width, height: buttonSize.height)
+        self.forwardButton.frame = CGRect(x: self.frame.size.width - horizontalMargin - buttonSize.width, y: (self.frame.size.height - buttonSize.height) / 2.0, width: buttonSize.width, height: buttonSize.height)
     }
     
     deinit
     {
         self.yearLabel.removeFromSuperview()
         self.monthLabel.removeFromSuperview()
-        self.backButton.removeFromSuperview()
+        self.prevButton.removeFromSuperview()
         self.forwardButton.removeFromSuperview()
     }
 }
 
 //MARK: FAMCalendarViewCell
+
+private class FAMCalendarWeekdayCell :UICollectionViewCell
+{
+    static let cellIdentifier :String = "calendarViewWeekdayCellIdentifier"
+
+    lazy var dateLabel :UILabel = {
+        let result :UILabel = UILabel()
+        result.textAlignment = NSTextAlignment.Center
+        result.font = UIFont(name: "Avenir-Heavy", size: 9.0)
+        result.backgroundColor = UIColor.clearColor()
+        result.textColor = UIColor(red: 0.25, green: 0.25, blue: 0.25, alpha: 1.0)
+        return result
+    }()
+
+    private var didSet :Bool = false
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+
+        self._commonInit()
+    }
+
+    required init?(coder aDecoder: NSCoder) {
+        super.init(coder: aDecoder)
+
+        self._commonInit()
+    }
+
+    private func _commonInit()
+    {
+        if didSet
+        {
+            return
+        }
+        didSet = true
+
+        self.backgroundColor = UIColor.clearColor()
+        self.addSubview(self.dateLabel)
+    }
+
+    private override func layoutSubviews() {
+        super.layoutSubviews()
+
+        self.dateLabel.frame = self.bounds
+    }
+}
 
 public class FAMCalendarViewCell :UICollectionViewCell
 {
@@ -234,9 +284,9 @@ public class FAMCalendarView :UICollectionView, UICollectionViewDelegate, UIColl
     public weak var calendarDataSource :FAMCalendarViewDataSource?
     public weak var calendarDelegate :FAMCalendarViewDelegate?
     
-    public var back :(() -> Void)?
-    public var forward :(() -> Void)?
-    public var didSelect :(() -> Void)?
+    public var prev :FAMCalendarViewBlocks?
+    public var forward :FAMCalendarViewBlocks?
+    public var didSelect :FAMCalendarViewCompletionBlocks?
     
     lazy var calendarHeaderView :FAMCalendarHeaderView = {
         let result :FAMCalendarHeaderView = FAMCalendarHeaderView()
@@ -268,12 +318,13 @@ public class FAMCalendarView :UICollectionView, UICollectionViewDelegate, UIColl
         self.delegate = self
         self.dataSource = self
         self.registerClass(FAMCalendarViewCell.self, forCellWithReuseIdentifier: FAMCalendarViewCell.cellIdentifier)
+        self.registerClass(FAMCalendarWeekdayCell.self, forCellWithReuseIdentifier: FAMCalendarWeekdayCell.cellIdentifier)
         self.registerClass(FAMCalendarHeaderView.self, forSupplementaryViewOfKind: UICollectionElementKindSectionHeader, withReuseIdentifier: FAMCalendarHeaderView.headerIdentifier)
     }
     
     //MARK: UICollectionViewDataSource
     public func numberOfSectionsInCollectionView(collectionView: UICollectionView) -> Int {
-        return self.numberOfWeeks
+        return self.numberOfWeeks + 1
     }
     
     public func collectionView(collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
@@ -281,24 +332,45 @@ public class FAMCalendarView :UICollectionView, UICollectionViewDelegate, UIColl
     }
     
     public func collectionView(collectionView: UICollectionView, cellForItemAtIndexPath indexPath: NSIndexPath) -> UICollectionViewCell {
-        let cell :FAMCalendarViewCell = collectionView.dequeueReusableCellWithReuseIdentifier(FAMCalendarViewCell.cellIdentifier, forIndexPath: indexPath) as! FAMCalendarViewCell
-        if let currentDate = self.date?.dateFromIndexPath(indexPath)
+        if 0 == indexPath.section
         {
-            cell.dateLabel.text = "\(currentDate.day())"
-            cell.active = currentDate.isEqual(toYear: self.year, month: self.month)
-            
-            cell.imageView.image = cell.active ? self.calendarDataSource?.imageForCalendarView(self, atDate: currentDate) : nil
+            let cell :FAMCalendarWeekdayCell = collectionView.dequeueReusableCellWithReuseIdentifier(FAMCalendarWeekdayCell.cellIdentifier, forIndexPath: indexPath) as! FAMCalendarWeekdayCell
+            cell.dateLabel.text = FAMCalendarWeekDay.toString(indexPath.row)
+            return cell
+        } else
+        {
+            let cell :FAMCalendarViewCell = collectionView.dequeueReusableCellWithReuseIdentifier(FAMCalendarViewCell.cellIdentifier, forIndexPath: indexPath) as! FAMCalendarViewCell
+            if let currentDate = self.date?.dateFromIndexPath(NSIndexPath(forRow: indexPath.row, inSection: indexPath.section - 1))
+            {
+                cell.dateLabel.text = "\(currentDate.day())"
+                cell.active = currentDate.isEqual(toYear: self.year, month: self.month)
+
+                cell.imageView.image = cell.active ? self.calendarDataSource?.imageForCalendarView(self, atDate: currentDate) : nil
+            }
+            return cell
         }
-        return cell
     }
     
     public func collectionView(collectionView: UICollectionView, viewForSupplementaryElementOfKind kind: String, atIndexPath indexPath: NSIndexPath) -> UICollectionReusableView {
         let view :FAMCalendarHeaderView = collectionView.dequeueReusableSupplementaryViewOfKind(kind, withReuseIdentifier: FAMCalendarHeaderView.headerIdentifier, forIndexPath: indexPath) as! FAMCalendarHeaderView
         view.yearLabel.text = "\(self.year)"
         view.monthLabel.text = "\(self.month)"
-        view.backButton.addTarget(self, action: #selector(FAMCalendarView.onBackButtonDidTapped(_:)), forControlEvents: .TouchUpInside)
+        view.prevButton.addTarget(self, action: #selector(FAMCalendarView.onPrevButtonDidTapped(_:)), forControlEvents: .TouchUpInside)
         view.forwardButton.addTarget(self, action: #selector(FAMCalendarView.onForwardButtonDidTapped(_:)), forControlEvents: .TouchUpInside)
         return view
+    }
+
+    public func collectionView(collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAtIndexPath indexPath: NSIndexPath) -> CGSize {
+        let layout :FAMCalendarViewLayout = collectionViewLayout as! FAMCalendarViewLayout
+        let size :CGSize = layout.itemSize
+
+        if 0 == indexPath.section
+        {
+            return CGSize(width: size.width, height: 20.0)
+        } else
+        {
+            return size
+        }
     }
     
     public func collectionView(collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, referenceSizeForHeaderInSection section: Int) -> CGSize {
@@ -312,18 +384,18 @@ public class FAMCalendarView :UICollectionView, UICollectionViewDelegate, UIColl
     }
     
     public func collectionView(collectionView: UICollectionView, didSelectItemAtIndexPath indexPath: NSIndexPath) {
-        if let currentDate = self.date?.dateFromIndexPath(indexPath)
-        {
-            self.calendarDelegate?.calendarView(self, didSelectedDate: currentDate)
-        }
-        
-        self.didSelect?()
+        self.didSelect?(completion: {
+            if let currentDate = self.date?.dateFromIndexPath(NSIndexPath(forRow: indexPath.row, inSection: indexPath.section - 1))
+            {
+                self.calendarDelegate?.calendarView(self, didSelectedDate: currentDate)
+            }
+        })
     }
-    
+
     //MARK: events
-    func onBackButtonDidTapped(button :UIButton)
+    func onPrevButtonDidTapped(button :UIButton)
     {
-        self.back?()
+        self.prev?()
     }
     
     func onForwardButtonDidTapped(button :UIButton)
@@ -405,16 +477,22 @@ public class FAMCalendarViewController :UIViewController
         self.contentView.frame = self.view.bounds
         self.currentCalendarView?.frame = self.view.bounds
     }
-    
-    //MARK: events
-    public func onCloseButtonDidTapped(button :UIBarButtonItem?)
+
+    public func close(completion: (() -> Void)?)
     {
         self.dismissViewControllerAnimated(true, completion: {
             self.currentCalendarView?.removeFromSuperview()
             self.currentCalendarView = nil
             self.dataSource = nil
             self.delegate = nil
+            completion?()
         })
+    }
+    
+    //MARK: events
+    public func onCloseButtonDidTapped(button :UIBarButtonItem?)
+    {
+        self.close(nil)
     }
     
     public func onSwipeGestureDidReceived(gesture :UISwipeGestureRecognizer)
@@ -429,11 +507,11 @@ public class FAMCalendarViewController :UIViewController
             self.forward(true)
         } else if gesture.direction == .Right
         {
-            self.back(true)
+            self.prev(true)
         }
     }
     
-    public func back(animated :Bool)
+    public func prev(animated :Bool)
     {
         let calendarView :FAMCalendarView = self.calendarView(withDate: NSDate.date(fromYear: self.currentCalendarView!.year, month: self.currentCalendarView!.month - 1, day: 1))
         self.contentView.addSubview(calendarView)
@@ -497,14 +575,14 @@ public class FAMCalendarViewController :UIViewController
         result.contentInset = self._contentInset
         result.calendarDataSource = self.dataSource
         result.calendarDelegate = self.delegate
-        result.back = {
-            self.back(true)
+        result.prev = {
+            self.prev(true)
         }
         result.forward = {
             self.forward(true)
         }
-        result.didSelect = {
-            self.onCloseButtonDidTapped(nil)
+        result.didSelect = { (completion :FAMCalendarViewBlocks) in
+            self.close(completion)
         }
         return result
     }
@@ -518,5 +596,16 @@ public class FAMCalendarViewController :UIViewController
         self.navigationItem.leftBarButtonItems = nil
         self.dataSource = nil
         self.delegate = nil
+    }
+}
+
+public class FAMCalendarNavigationController :UINavigationController
+{
+    public override func viewDidLoad() {
+        super.viewDidLoad()
+
+        self.navigationBar.shadowImage = UIImage()
+        self.navigationBar.setBackgroundImage(UIImage(), forBarMetrics: .Default)
+        self.navigationBar.backgroundColor = UIColor.clearColor()
     }
 }

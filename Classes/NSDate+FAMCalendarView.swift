@@ -8,6 +8,39 @@
 
 import Foundation
 
+public enum FAMCalendarWeekDay :Int
+{
+    case Sunday = 0
+    case Monday
+    case Tuesday
+    case Wednesday
+    case Thursday
+    case Friday
+    case Saturday
+    static func toString(value :Int) -> String
+    {
+        switch value
+        {
+        case self.Sunday.rawValue:
+            return "Sun"
+        case self.Monday.rawValue:
+            return "Mon"
+        case self.Tuesday.rawValue:
+            return "Tue"
+        case self.Wednesday.rawValue:
+            return "Wed"
+        case self.Thursday.rawValue:
+            return "Thu"
+        case self.Friday.rawValue:
+            return "Fri"
+        case self.Saturday.rawValue:
+            return "Sat"
+        default:
+            return ""
+        }
+    }
+}
+
 public protocol NSDateFAMCalendarViewProtocol
 {
     func dateFromIndexPath(indexPath :NSIndexPath) -> NSDate?

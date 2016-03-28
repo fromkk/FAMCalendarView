@@ -17,6 +17,7 @@ class ViewController: UIViewController, UICollectionViewDelegate, UICollectionVi
     var fetchResult :PHFetchResult?
     var dateAssets :Dictionary<String, UIImage> = [:]
     var dateIndexes :Dictionary<String, Int> = [:]
+    let dateFormat :String = "yyyyMMdd"
     
     lazy var layout :UICollectionViewFlowLayout = {
         let result :UICollectionViewFlowLayout = UICollectionViewFlowLayout()
@@ -99,11 +100,7 @@ class ViewController: UIViewController, UICollectionViewDelegate, UICollectionVi
             {
                 return
             }
-            let dateString :String = creationDate.formatedString("yyyyMMdd")
-            if let _ :UIImage = self.dateAssets[dateString]
-            {
-                return
-            }
+            let dateString :String = creationDate.formatedString(self.dateFormat)
             
             if nil != asset
             {
@@ -141,7 +138,7 @@ class ViewController: UIViewController, UICollectionViewDelegate, UICollectionVi
         let calendarViewController :FAMCalendarViewController = FAMCalendarViewController(withDate: NSDate())
         calendarViewController.dataSource = self
         calendarViewController.delegate = self
-        let navigationController :UINavigationController = UINavigationController(rootViewController: calendarViewController)
+        let navigationController :FAMCalendarNavigationController = FAMCalendarNavigationController(rootViewController: calendarViewController)
         self.presentViewController(navigationController, animated: true, completion: nil)
     }
     
@@ -183,7 +180,7 @@ class ViewController: UIViewController, UICollectionViewDelegate, UICollectionVi
     
     //MARK: FAMCalendarViewDataSource
     func imageForCalendarView(calendarView: FAMCalendarView, atDate date: NSDate) -> UIImage? {
-        let dateString :String = date.formatedString("yyyyMMdd")
+        let dateString :String = date.formatedString(self.dateFormat)
         guard let image :UIImage = self.dateAssets[dateString] else
         {
             return nil
@@ -194,7 +191,7 @@ class ViewController: UIViewController, UICollectionViewDelegate, UICollectionVi
     
     //MARK: FAMCalendarViewDelegate
     func calendarView(calendarView: FAMCalendarView, didSelectedDate date: NSDate) {
-        let dateString :String = date.formatedString("yyyyMMdd")
+        let dateString :String = date.formatedString(self.dateFormat)
         if let index :Int = self.dateIndexes[dateString]
         {
             let indexPath :NSIndexPath = NSIndexPath(forRow: index, inSection: 0)
