@@ -18,6 +18,8 @@ class ViewController: UIViewController, UICollectionViewDelegate, UICollectionVi
     var dateAssets :Dictionary<String, UIImage> = [:]
     var dateIndexes :Dictionary<String, Int> = [:]
     let dateFormat :String = "yyyyMMdd"
+    var minDate :NSDate?
+    var maxDate :NSDate?
     
     lazy var layout :UICollectionViewFlowLayout = {
         let result :UICollectionViewFlowLayout = UICollectionViewFlowLayout()
@@ -100,6 +102,15 @@ class ViewController: UIViewController, UICollectionViewDelegate, UICollectionVi
             {
                 return
             }
+            if nil == self.minDate || self.minDate?.compare(creationDate) == .OrderedDescending
+            {
+                self.minDate = creationDate
+            }
+            if nil == self.maxDate || self.maxDate?.compare(creationDate) == .OrderedAscending
+            {
+                self.maxDate = creationDate
+            }
+
             let dateString :String = creationDate.formatedString(self.dateFormat)
             
             if nil != asset
@@ -135,9 +146,7 @@ class ViewController: UIViewController, UICollectionViewDelegate, UICollectionVi
     
     func onSearchButtonDidTapped(button :UIBarButtonItem)
     {
-        let calendarViewController :FAMCalendarViewController = FAMCalendarViewController(withDate: NSDate())
-        calendarViewController.dataSource = self
-        calendarViewController.delegate = self
+        let calendarViewController :FAMCalendarViewController = FAMCalendarViewController(withDate: NSDate(), dataSource: self, delegate: self)
         let navigationController :FAMCalendarNavigationController = FAMCalendarNavigationController(rootViewController: calendarViewController)
         self.presentViewController(navigationController, animated: true, completion: nil)
     }
@@ -187,6 +196,14 @@ class ViewController: UIViewController, UICollectionViewDelegate, UICollectionVi
         }
         
         return image
+    }
+
+    func calendarViewMinDate() -> NSDate? {
+        return self.minDate
+    }
+
+    func calendarViewMaxDate() -> NSDate? {
+        return self.maxDate
     }
     
     //MARK: FAMCalendarViewDelegate

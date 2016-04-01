@@ -48,6 +48,7 @@ public protocol NSDateFAMCalendarViewProtocol
     func isEqual(toYear year :Int, month :Int) -> Bool
     func formatedString(format :String) -> String
     static func date(fromYear year :Int, month :Int, day :Int) -> NSDate
+    static func totalMonths(minDate :NSDate, maxDate :NSDate) -> Int
 }
 
 extension NSDate :NSDateFAMCalendarViewProtocol
@@ -98,5 +99,15 @@ extension NSDate :NSDateFAMCalendarViewProtocol
         calendar.locale = NSLocale.systemLocale()
         calendar.timeZone = NSTimeZone.systemTimeZone()
         return calendar.dateFromComponents(components)!
+    }
+
+    public static func totalMonths(minDate: NSDate, maxDate: NSDate) -> Int {
+        let minComp :NSDateComponents = NSCalendar.currentCalendar().components([.Year, .Month, .Day], fromDate: minDate)
+        let maxComp :NSDateComponents = NSCalendar.currentCalendar().components([.Year, .Month, .Day], fromDate: maxDate)
+
+        let totalYear :Int = maxComp.year - minComp.year
+        let totalMonth :Int = maxComp.month - minComp.month
+
+        return totalYear * 12 + totalMonth + 1
     }
 }

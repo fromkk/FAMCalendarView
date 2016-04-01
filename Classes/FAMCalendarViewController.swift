@@ -14,6 +14,8 @@ public typealias FAMCalendarViewCompletionBlocks = ((completion: FAMCalendarView
 public protocol FAMCalendarViewDataSource : class
 {
     func imageForCalendarView(calendarView :FAMCalendarView, atDate date :NSDate) -> UIImage?
+    func calendarViewMinDate() -> NSDate?
+    func calendarViewMaxDate() -> NSDate?
 }
 
 public protocol FAMCalendarViewDelegate : class
@@ -412,7 +414,62 @@ public class FAMCalendarView :UICollectionView, UICollectionViewDelegate, UIColl
     }
 }
 
-public class FAMCalendarViewController :UIViewController
+public class FAMCalendarViewCollectionViewCell :UICollectionViewCell
+{
+    public static let cellIdentifier = "calendarViewCollectionViewCellIdentifier"
+    public var date :NSDate = NSDate() {
+        didSet
+        {
+            self.calendarView.date = self.date
+            self.calendarView.reloadData()
+        }
+    }
+    public weak var dataSource :FAMCalendarViewDataSource? {
+        didSet
+        {
+            self.calendarView.calendarDataSource = self.dataSource
+            self.calendarView.reloadData()
+        }
+    }
+    public weak var delegate :FAMCalendarViewDelegate? {
+        didSet
+        {
+            self.calendarView.calendarDelegate = self.delegate
+        }
+    }
+    public lazy var calendarView :FAMCalendarView = {
+        let result :FAMCalendarView = FAMCalendarView(frame: CGRect.zero, collectionViewLayout: FAMCalendarViewLayout())
+        result.date = self.date
+        result.calendarDelegate = self.delegate
+        result.calendarDataSource = self.dataSource
+        return result
+    }()
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        self._commonInit()
+    }
+    required public init?(coder aDecoder: NSCoder) {
+        super.init(coder: aDecoder)
+        self._commonInit()
+    }
+    private var didSet :Bool = false
+    private func _commonInit()
+    {
+        if self.didSet
+        {
+            return
+        }
+        self.didSet = true
+        self.backgroundColor = UIColor.whiteColor()
+        self.contentView.addSubview(self.calendarView)
+    }
+    public override func layoutSubviews() {
+        super.layoutSubviews()
+        self.calendarView.frame = self.bounds
+    }
+}
+
+public class FAMCalendarViewController :UIViewController, UICollectionViewDelegate, UICollectionViewDataSource
 {
     public var date :NSDate
     
@@ -420,35 +477,38 @@ public class FAMCalendarViewController :UIViewController
         let result :UIBarButtonItem = UIBarButtonItem(barButtonSystemItem: .Stop, target: self, action: #selector(FAMCalendarViewController.onCloseButtonDidTapped(_:)))
         return result
     }()
-    
-    private var currentCalendarView :FAMCalendarView?
-    private var lastPoint :CGPoint?
-    
+
     public weak var dataSource :FAMCalendarViewDataSource?
     public weak var delegate :FAMCalendarViewDelegate?
-    
-    lazy private var leftSwipeGesture :UISwipeGestureRecognizer = { [weak self] in
-        let result :UISwipeGestureRecognizer = UISwipeGestureRecognizer(target: self, action: #selector(FAMCalendarViewController.onSwipeGestureDidReceived(_:)))
-        result.direction = .Left
-        return result
-    }()
-    lazy private var rightSwipeGesture :UISwipeGestureRecognizer = { [weak self] in
-        let result :UISwipeGestureRecognizer = UISwipeGestureRecognizer(target: self, action: #selector(FAMCalendarViewController.onSwipeGestureDidReceived(_:)))
-        result.direction = .Right
-        return result
-    }()
+
     lazy private var _contentInset :UIEdgeInsets = { [weak self] in
         return UIEdgeInsets(top: UIApplication.sharedApplication().statusBarFrame.height + (self?.navigationController?.navigationBar.frame.height ?? 0.0), left: 0.0, bottom: 0.0, right: 0.0)
     }()
-    lazy public var contentView :UIView = {
-        let result :UIView = UIView()
-        result.backgroundColor = UIColor.clearColor()
+    lazy public var layout :UICollectionViewFlowLayout = {
+        let layout :UICollectionViewFlowLayout = UICollectionViewFlowLayout()
+        layout.scrollDirection = .Horizontal
+        layout.minimumLineSpacing = 0.0
+        layout.minimumInteritemSpacing = 0.0
+        layout.itemSize = UIScreen.mainScreen().bounds.size
+        return layout
+    }()
+    lazy public var collectionView :UICollectionView = {
+        let result :UICollectionView = UICollectionView(frame: CGRect.zero, collectionViewLayout: self.layout)
+        result.backgroundColor = UIColor.whiteColor()
+        result.registerClass(FAMCalendarViewCollectionViewCell.self, forCellWithReuseIdentifier: FAMCalendarViewCollectionViewCell.cellIdentifier)
+        result.delegate = self
+        result.dataSource = self
+        result.pagingEnabled = true
+        result.showsVerticalScrollIndicator = false
+        result.showsHorizontalScrollIndicator = false
         return result
     }()
     
-    init(withDate date :NSDate)
+    init(withDate date :NSDate, dataSource :FAMCalendarViewDataSource?, delegate :FAMCalendarViewDelegate?)
     {
         self.date = date
+        self.dataSource = dataSource
+        self.delegate = delegate
         super.init(nibName: nil, bundle: nil)
     }
     
@@ -462,27 +522,25 @@ public class FAMCalendarViewController :UIViewController
         
         self.navigationItem.leftBarButtonItems = [self.closeButton]
         self.automaticallyAdjustsScrollViewInsets = false
-        
-        self.currentCalendarView = self.calendarView(withDate: self.date)
         self.view.backgroundColor = UIColor.whiteColor()
-        self.view.addSubview(self.contentView)
-        self.contentView.addSubview(self.currentCalendarView!)
-        self.view.addGestureRecognizer(self.leftSwipeGesture)
-        self.view.addGestureRecognizer(self.rightSwipeGesture)
+        self.view.addSubview(self.collectionView)
     }
-    
+
+    private var _didSetContentOffset :Bool = false
     public override func viewWillLayoutSubviews() {
         super.viewWillLayoutSubviews()
-        
-        self.contentView.frame = self.view.bounds
-        self.currentCalendarView?.frame = self.view.bounds
+        self.collectionView.frame = self.view.bounds
+
+        if let indexPath :NSIndexPath = self._indexPathFromDate(self.date) where !_didSetContentOffset
+        {
+            _didSetContentOffset = true
+            self.collectionView.scrollToItemAtIndexPath(indexPath, atScrollPosition: .CenteredHorizontally, animated: false)
+        }
     }
 
     public func close(completion: (() -> Void)?)
     {
         self.dismissViewControllerAnimated(true, completion: {
-            self.currentCalendarView?.removeFromSuperview()
-            self.currentCalendarView = nil
             self.dataSource = nil
             self.delegate = nil
             completion?()
@@ -494,105 +552,107 @@ public class FAMCalendarViewController :UIViewController
     {
         self.close(nil)
     }
-    
-    public func onSwipeGestureDidReceived(gesture :UISwipeGestureRecognizer)
+
+    private func _totalMonths() -> Int
     {
-        if gesture.state != .Ended
+        guard let minDate :NSDate = self.dataSource?.calendarViewMinDate() else
+        {
+            return 0
+        }
+
+        guard let maxDate :NSDate = self.dataSource?.calendarViewMaxDate() else
+        {
+            return 0
+        }
+
+        return NSDate.totalMonths(minDate, maxDate: maxDate)
+    }
+
+    private func _dateFromIndexPath(indexPath :NSIndexPath) -> NSDate?
+    {
+        guard let minDate :NSDate = self.dataSource?.calendarViewMinDate() else
+        {
+            return nil
+        }
+
+        let components :NSDateComponents = NSCalendar.currentCalendar().components([.Year, .Month, .Day], fromDate: minDate)
+        components.day = 1
+        components.month += indexPath.row
+        return NSCalendar.currentCalendar().dateFromComponents(components)
+    }
+
+    private func _indexPathFromDate(date :NSDate?) -> NSIndexPath?
+    {
+        if nil == date
+        {
+            return nil
+        }
+
+        guard let minDate :NSDate = self.dataSource?.calendarViewMinDate() else
+        {
+            return nil
+        }
+
+        guard let maxDate :NSDate = self.dataSource?.calendarViewMaxDate() else
+        {
+            return nil
+        }
+
+        let compareMin :NSComparisonResult = minDate.compare(date!)
+        let compareMax :NSComparisonResult = maxDate.compare(date!)
+        if compareMin == .OrderedAscending && compareMax == .OrderedDescending
+        {
+            let totalMonths :Int = NSDate.totalMonths(minDate, maxDate: date!)
+            return NSIndexPath(forRow: totalMonths, inSection: 0)
+        } else if (compareMin == .OrderedDescending)
+        {
+            return NSIndexPath(forRow: 0, inSection: 0)
+        } else
+        {
+            return NSIndexPath(forRow: self._totalMonths() - 1, inSection: 0)
+        }
+    }
+
+    private func _moveToIndexPath(indexPath :NSIndexPath) -> Void
+    {
+        if 0 > indexPath.row || indexPath.row >= self.collectionView.numberOfItemsInSection(indexPath.section)
         {
             return
         }
-        
-        if gesture.direction == .Left
-        {
-            self.forward(true)
-        } else if gesture.direction == .Right
-        {
-            self.prev(true)
-        }
+
+        self.collectionView.scrollToItemAtIndexPath(indexPath, atScrollPosition: .CenteredHorizontally, animated: true)
     }
-    
-    public func prev(animated :Bool)
-    {
-        let calendarView :FAMCalendarView = self.calendarView(withDate: NSDate.date(fromYear: self.currentCalendarView!.year, month: self.currentCalendarView!.month - 1, day: 1))
-        self.contentView.addSubview(calendarView)
-        if animated
-        {
-            calendarView.frame = self.view.bounds
-            calendarView.frame.origin.x = -calendarView.frame.size.width
-            UIView.animateWithDuration(0.33, animations: {
-                var moveFrame :CGRect = self.view.bounds
-                moveFrame.origin.x = moveFrame.size.width
-                self.contentView.frame = moveFrame
-            }, completion: { (finished :Bool) in
-                self.contentView.frame.origin.x = 0.0
-                self.currentCalendarView?.removeFromSuperview()
-                self.currentCalendarView = calendarView
-                self.currentCalendarView?.frame = self.view.bounds
-            })
-        } else
-        {
-            self.currentCalendarView?.removeFromSuperview()
-            self.currentCalendarView?.delegate = nil
-            self.currentCalendarView?.dataSource = nil
-            self.currentCalendarView = nil
-            self.currentCalendarView = calendarView
-        }
+
+    //MARK: UICollectionViewDelegate UIColelctionViewDataSource
+    public func numberOfSectionsInCollectionView(collectionView: UICollectionView) -> Int {
+        return 1
     }
-    
-    public func forward(animated :Bool)
-    {
-        let calendarView :FAMCalendarView = self.calendarView(withDate: NSDate.date(fromYear: self.currentCalendarView!.year, month: self.currentCalendarView!.month + 1, day: 1))
-        self.contentView.addSubview(calendarView)
-        if animated
-        {
-            calendarView.frame = self.view.bounds
-            calendarView.frame.origin.x = calendarView.frame.size.width
-            UIView.animateWithDuration(0.33, animations: {
-                var moveFrame :CGRect = self.view.bounds
-                moveFrame.origin.x = -moveFrame.size.width
-                self.contentView.frame = moveFrame
-            }, completion: { (finished :Bool) in
-                self.contentView.frame.origin.x = 0.0
-                self.currentCalendarView?.removeFromSuperview()
-                self.currentCalendarView = calendarView
-                self.currentCalendarView?.frame = self.view.bounds
-            })
-        } else
-        {
-            self.currentCalendarView?.removeFromSuperview()
-            self.currentCalendarView?.delegate = nil
-            self.currentCalendarView?.dataSource = nil
-            self.currentCalendarView = nil
-            self.currentCalendarView = calendarView
-        }
+
+    public func collectionView(collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
+        return self._totalMonths()
     }
-    
-    //MARK: elements
-    func calendarView(withDate date :NSDate) -> FAMCalendarView
-    {
-        let result :FAMCalendarView = FAMCalendarView(frame: self.view.bounds, collectionViewLayout: FAMCalendarViewLayout())
-        result.date = date
-        result.contentInset = self._contentInset
-        result.calendarDataSource = self.dataSource
-        result.calendarDelegate = self.delegate
-        result.prev = {
-            self.prev(true)
+
+    public func collectionView(collectionView: UICollectionView, cellForItemAtIndexPath indexPath: NSIndexPath) -> UICollectionViewCell {
+        let cell :FAMCalendarViewCollectionViewCell = collectionView.dequeueReusableCellWithReuseIdentifier(FAMCalendarViewCollectionViewCell.cellIdentifier, forIndexPath: indexPath) as! FAMCalendarViewCollectionViewCell
+        cell.calendarView.contentInset = self._contentInset
+        cell.calendarView.prev = {
+            self._moveToIndexPath(NSIndexPath(forRow: indexPath.row - 1, inSection: indexPath.section))
         }
-        result.forward = {
-            self.forward(true)
+        cell.calendarView.forward = {
+            self._moveToIndexPath(NSIndexPath(forRow: indexPath.row + 1, inSection: indexPath.section))
         }
-        result.didSelect = { (completion :FAMCalendarViewBlocks) in
+        cell.calendarView.didSelect = { (completion :FAMCalendarViewBlocks) in
             self.close(completion)
         }
-        return result
+        cell.calendarView.date = self._dateFromIndexPath(indexPath)
+        cell.delegate = self.delegate
+        cell.dataSource = self.dataSource
+        return cell
     }
     
     //MARK: deinit
     deinit
     {
-        self.currentCalendarView?.removeFromSuperview()
-        self.currentCalendarView = nil
-        self.contentView.removeFromSuperview()
         self.navigationItem.leftBarButtonItems = nil
         self.dataSource = nil
         self.delegate = nil
@@ -601,6 +661,11 @@ public class FAMCalendarViewController :UIViewController
 
 public class FAMCalendarNavigationController :UINavigationController
 {
+    public override func loadView() {
+        super.loadView()
+        self.modalTransitionStyle = .CrossDissolve
+    }
+
     public override func viewDidLoad() {
         super.viewDidLoad()
 
