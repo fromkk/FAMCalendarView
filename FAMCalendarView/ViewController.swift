@@ -146,7 +146,24 @@ class ViewController: UIViewController, UICollectionViewDelegate, UICollectionVi
     
     func onSearchButtonDidTapped(button :UIBarButtonItem)
     {
-        let calendarViewController :FAMCalendarViewController = FAMCalendarViewController(withDate: NSDate(), dataSource: self, delegate: self)
+        guard let collectionViewLayout :UICollectionViewFlowLayout = self.collectionView.collectionViewLayout as? UICollectionViewFlowLayout else
+        {
+            return
+        }
+
+        let contentOffset :CGPoint = CGPoint(x: self.collectionView.contentOffset.x + (collectionViewLayout.itemSize.width / 2.0), y: self.collectionView.contentOffset.y + self.collectionView.contentInset.top + (self.navigationController?.navigationBar.frame.size.height ?? 0.0) + (UIApplication.sharedApplication().statusBarFrame.size.height ?? 0.0) + (collectionViewLayout.itemSize.height / 2.0))
+        print(contentOffset)
+        guard let indexPath :NSIndexPath = self.collectionView.indexPathForItemAtPoint(contentOffset) else
+        {
+            return
+        }
+
+        guard let date :NSDate = self.fetchResult?.objectAtIndex(indexPath.row).creationDate else
+        {
+            return
+        }
+
+        let calendarViewController :FAMCalendarViewController = FAMCalendarViewController(withDate: date, dataSource: self, delegate: self)
         let navigationController :FAMCalendarNavigationController = FAMCalendarNavigationController(rootViewController: calendarViewController)
         self.presentViewController(navigationController, animated: true, completion: nil)
     }

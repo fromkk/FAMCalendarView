@@ -8,6 +8,8 @@
 
 import UIKit
 
+let FAMCalendarYearViewSize :CGSize = CGSize(width: 100.0, height: 44.0)
+
 public typealias FAMCalendarViewBlocks = (() -> Void)
 public typealias FAMCalendarViewCompletionBlocks = ((completion: FAMCalendarViewBlocks) -> Void)
 
@@ -226,9 +228,11 @@ public class FAMCalendarViewCell :UICollectionViewCell
     }
 }
 
+//MARK: FAMCalendarViewLayout
+
 public class FAMCalendarViewLayout :UICollectionViewFlowLayout
 {
-    private var margin :CGFloat = 2.0
+    private let margin :CGFloat = 2.0
     public static let numberOfWeekDays :CGFloat = 7.0
     lazy private var calendarItemSize :CGSize = {
         let size :CGFloat = ((UIScreen.mainScreen().bounds.size.width - numberOfWeekDays) / numberOfWeekDays)
@@ -243,11 +247,13 @@ public class FAMCalendarViewLayout :UICollectionViewFlowLayout
         self.minimumInteritemSpacing = self.margin
         self.sectionInset = UIEdgeInsets(top: self.margin, left: 0.0, bottom: 0.0, right: 0.0)
     }
-    
+
     required public init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
 }
+
+//MARK: FAMCalendarView
 
 public class FAMCalendarView :UICollectionView, UICollectionViewDelegate, UICollectionViewDataSource, UICollectionViewDelegateFlowLayout
 {
@@ -414,6 +420,8 @@ public class FAMCalendarView :UICollectionView, UICollectionViewDelegate, UIColl
     }
 }
 
+//MARK: FAMCalendarViewCollectionViewCell
+
 public class FAMCalendarViewCollectionViewCell :UICollectionViewCell
 {
     public static let cellIdentifier = "calendarViewCollectionViewCellIdentifier"
@@ -469,7 +477,224 @@ public class FAMCalendarViewCollectionViewCell :UICollectionViewCell
     }
 }
 
-public class FAMCalendarViewController :UIViewController, UICollectionViewDelegate, UICollectionViewDataSource
+//MARK: FAMCalendarYearsCollectionViewlayout
+
+public class FAMCalendarYearsCollectionViewlayout : UICollectionViewFlowLayout
+{
+    private static let margin :CGFloat = 2.0
+    override init() {
+        super.init()
+        self._commonInit()
+    }
+
+    public required init?(coder aDecoder: NSCoder) {
+        super.init(coder: aDecoder)
+        self._commonInit()
+    }
+
+    var _didSet :Bool = false
+    private func _commonInit()
+    {
+        if _didSet
+        {
+            return
+        }
+        _didSet = true
+
+        self.itemSize = FAMCalendarYearViewSize
+        self.minimumLineSpacing = self.dynamicType.margin
+        self.minimumInteritemSpacing = self.dynamicType.margin
+        self.scrollDirection = .Horizontal
+    }
+
+    //参考：http://dev.classmethod.jp/smartphone/iphone/collection-view-layout-cell-snap/
+    public override func targetContentOffsetForProposedContentOffset(proposedContentOffset: CGPoint, withScrollingVelocity velocity: CGPoint) -> CGPoint {
+        let width :CGFloat = (FAMCalendarYearViewSize.width + self.dynamicType.margin)
+        let offset :CGPoint = CGPoint(x: (self.collectionView?.contentOffset.x ?? 0.0) + (self.collectionView?.contentInset.left ?? 0.0), y: self.collectionView?.contentOffset.y ?? 0.0)
+        let currentPage :CGFloat = offset.x / width
+        let maxPage :CGFloat = (self.collectionView?.contentSize.width ?? 0.0) / width
+        let nextPage :CGFloat = (velocity.x > 0.0 && maxPage > ceil(currentPage)) ? ceil(currentPage) : floor(currentPage)
+        return CGPoint(x: nextPage * width - (self.collectionView?.contentInset.left ?? 0.0), y: proposedContentOffset.y)
+    }
+}
+
+//MARK: FAMCalendarYearsCollectionViewCell
+
+public class FAMCalendarYearsCollectionViewCell : UICollectionViewCell
+{
+    static public let cellIdentifier :String = "calendarYearsCollectionViewCellIdentifier"
+
+    public override init(frame: CGRect) {
+        super.init(frame: frame)
+        self._commonInit()
+    }
+
+    public required init?(coder aDecoder: NSCoder) {
+        super.init(coder: aDecoder)
+        self._commonInit()
+    }
+
+    override public func layoutSubviews() {
+        super.layoutSubviews()
+
+        self.textLabel.frame = self.bounds
+    }
+
+    private var _didSet :Bool = false
+    private func _commonInit()
+    {
+        if _didSet
+        {
+            return
+        }
+
+        _didSet = true
+        self.contentView.backgroundColor = UIColor.whiteColor()
+        self.contentView.addSubview(self.textLabel)
+    }
+
+    public lazy var textLabel :UILabel = {
+        let result :UILabel = UILabel()
+        result.numberOfLines = 1
+        result.lineBreakMode = NSLineBreakMode.ByCharWrapping
+        result.font = UIFont(name: "Avenir-Heavy", size: 12.0)
+        result.textColor = UIColor.blackColor()
+        result.textAlignment = .Center
+        return result
+    }()
+}
+
+protocol FAMCalendarYearsCollectionViewDelegate : class
+{
+    func calendarYearsView(calendarYearsView view :FAMCalendarYearsCollectionView, didChangedYear year:Int) -> Void
+}
+
+//MARK: FAMCalendarYearsCollectionView
+
+public class FAMCalendarYearsCollectionView : UICollectionView, UICollectionViewDelegate, UICollectionViewDataSource
+{
+    public var years :[Int] = [] {
+        didSet
+        {
+            self.reloadData()
+        }
+    }
+
+    public var year :Int = NSDate().year() {
+        didSet
+        {
+            self._selectYear(self.year)
+        }
+    }
+
+    weak var yearsDelegate :FAMCalendarYearsCollectionViewDelegate?
+
+    public override init(frame: CGRect, collectionViewLayout layout: UICollectionViewLayout) {
+        super.init(frame: frame, collectionViewLayout: layout)
+        self._commonInit()
+    }
+
+    required public init?(coder aDecoder: NSCoder) {
+        super.init(coder: aDecoder)
+        self._commonInit()
+    }
+
+    var _didSet :Bool = false
+    private func _commonInit()
+    {
+        if _didSet
+        {
+            return
+        }
+
+        _didSet = true
+        self.backgroundColor = UIColor.whiteColor()
+        self.registerClass(FAMCalendarYearsCollectionViewCell.self, forCellWithReuseIdentifier: FAMCalendarYearsCollectionViewCell.cellIdentifier)
+        self.delegate = self
+        self.dataSource = self
+        self.contentInset = UIEdgeInsets(top: 0.0, left: (self.frame.size.width - FAMCalendarYearViewSize.width) / 2.0, bottom: 0.0, right: (self.frame.size.width - FAMCalendarYearViewSize.width) / 2.0)
+        self.showsVerticalScrollIndicator = false
+        self.showsHorizontalScrollIndicator = false
+    }
+
+    private func _selectYear(year :Int)
+    {
+        if let index :Int = self.years.indexOf(year)
+        {
+            guard let collectionViewLayout :FAMCalendarYearsCollectionViewlayout = self.collectionViewLayout as? FAMCalendarYearsCollectionViewlayout else
+            {
+                return
+            }
+
+            let contentOffset :CGPoint = CGPoint(x: (CGFloat(index) * (collectionViewLayout.itemSize.width + collectionViewLayout.minimumInteritemSpacing)), y: self.contentOffset.y)
+            self.scrollRectToVisible(CGRect(x: contentOffset.x, y: contentOffset.y, width: collectionViewLayout.itemSize.width, height: collectionViewLayout.itemSize.height), animated: true)
+        }
+    }
+
+    //MARK: UICollectionViewDataSource nad UICollectionViewDelegate
+    public func numberOfSectionsInCollectionView(collectionView: UICollectionView) -> Int {
+        return 1
+    }
+
+    public func collectionView(collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
+        return self.years.count
+    }
+
+    public func collectionView(collectionView: UICollectionView, cellForItemAtIndexPath indexPath: NSIndexPath) -> UICollectionViewCell {
+        let cell :FAMCalendarYearsCollectionViewCell = collectionView.dequeueReusableCellWithReuseIdentifier(FAMCalendarYearsCollectionViewCell.cellIdentifier, forIndexPath: indexPath) as! FAMCalendarYearsCollectionViewCell
+        cell.textLabel.text = "\(self.years[indexPath.row])"
+        return cell
+    }
+
+    public func collectionView(collectionView: UICollectionView, didSelectItemAtIndexPath indexPath: NSIndexPath) {
+        if self.years.count > indexPath.row
+        {
+            self.year = self.years[indexPath.row]
+        }
+    }
+
+    //MARK: UIScrollViewDelegate
+    public func scrollViewDidEndDecelerating(scrollView: UIScrollView) {
+        self._checkScrollViewScrolling(scrollView)
+    }
+
+    public func scrollViewDidEndScrollingAnimation(scrollView: UIScrollView) {
+        self._checkScrollViewScrolling(scrollView)
+    }
+
+    public func scrollViewDidEndDragging(scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+        self._checkScrollViewScrolling(scrollView)
+    }
+
+    private func _checkScrollViewScrolling(scrollView :UIScrollView)
+    {
+        if scrollView.dragging || scrollView.decelerating || scrollView.tracking
+        {
+            return
+        }
+
+        guard let indexPath :NSIndexPath = self.indexPathForItemAtPoint(CGPoint(x: scrollView.contentOffset.x + scrollView.contentInset.left, y: scrollView.contentOffset.y)) else
+        {
+            return
+        }
+
+        if self.years.count > indexPath.row
+        {
+            self.yearsDelegate?.calendarYearsView(calendarYearsView: self, didChangedYear: self.years[indexPath.row])
+        }
+    }
+
+    //MARK: deinit
+    deinit
+    {
+        self.delegate = nil
+        self.dataSource = nil
+    }
+}
+
+//MARK: FAMCalendarViewController
+
+public class FAMCalendarViewController :UIViewController, UICollectionViewDelegate, UICollectionViewDataSource, FAMCalendarYearsCollectionViewDelegate
 {
     public var date :NSDate
     
@@ -478,7 +703,17 @@ public class FAMCalendarViewController :UIViewController, UICollectionViewDelega
         return result
     }()
 
-    public weak var dataSource :FAMCalendarViewDataSource?
+    public weak var dataSource :FAMCalendarViewDataSource? {
+        didSet
+        {
+            guard let minDate :NSDate = self.dataSource?.calendarViewMinDate(), let maxDate :NSDate = self.dataSource?.calendarViewMaxDate() else
+            {
+                return
+            }
+
+            self.yearsCollectionView.years = NSDate.yearsFromDates(minDate, endDate: maxDate)
+        }
+    }
     public weak var delegate :FAMCalendarViewDelegate?
 
     lazy private var _contentInset :UIEdgeInsets = { [weak self] in
@@ -503,6 +738,14 @@ public class FAMCalendarViewController :UIViewController, UICollectionViewDelega
         result.showsHorizontalScrollIndicator = false
         return result
     }()
+    public lazy var yearsLayout :FAMCalendarYearsCollectionViewlayout = {
+        return FAMCalendarYearsCollectionViewlayout()
+    }()
+    public lazy var yearsCollectionView :FAMCalendarYearsCollectionView = {
+        let result :FAMCalendarYearsCollectionView = FAMCalendarYearsCollectionView(frame: CGRect(x: 0.0, y: self.view.frame.size.height - FAMCalendarYearViewSize.height, width: self.view.frame.size.width, height: FAMCalendarYearViewSize.height), collectionViewLayout: self.yearsLayout)
+        result.yearsDelegate = self
+        return result
+    }()
     
     init(withDate date :NSDate, dataSource :FAMCalendarViewDataSource?, delegate :FAMCalendarViewDelegate?)
     {
@@ -524,17 +767,30 @@ public class FAMCalendarViewController :UIViewController, UICollectionViewDelega
         self.automaticallyAdjustsScrollViewInsets = false
         self.view.backgroundColor = UIColor.whiteColor()
         self.view.addSubview(self.collectionView)
+        self.view.addSubview(self.yearsCollectionView)
+
+        if let minDate :NSDate = self.dataSource?.calendarViewMinDate(), let maxDate :NSDate = self.dataSource?.calendarViewMaxDate()
+        {
+            self.yearsCollectionView.years = NSDate.yearsFromDates(minDate, endDate: maxDate)
+        }
+    }
+
+    public override func viewDidAppear(animated: Bool) {
+        super.viewDidAppear(animated)
+
+        self.yearsCollectionView.year = self.date.year()
     }
 
     private var _didSetContentOffset :Bool = false
     public override func viewWillLayoutSubviews() {
         super.viewWillLayoutSubviews()
         self.collectionView.frame = self.view.bounds
+        self.yearsCollectionView.frame = CGRect(x: 0.0, y: self.view.frame.size.height - FAMCalendarYearViewSize.height, width: self.view.frame.size.width, height: FAMCalendarYearViewSize.height)
 
         if let indexPath :NSIndexPath = self._indexPathFromDate(self.date) where !_didSetContentOffset
         {
             _didSetContentOffset = true
-            self.collectionView.scrollToItemAtIndexPath(indexPath, atScrollPosition: .CenteredHorizontally, animated: false)
+            self._moveToIndexPath(indexPath, animated: false)
         }
     }
 
@@ -588,12 +844,7 @@ public class FAMCalendarViewController :UIViewController, UICollectionViewDelega
             return nil
         }
 
-        guard let minDate :NSDate = self.dataSource?.calendarViewMinDate() else
-        {
-            return nil
-        }
-
-        guard let maxDate :NSDate = self.dataSource?.calendarViewMaxDate() else
+        guard let minDate :NSDate = self.dataSource?.calendarViewMinDate(), let maxDate :NSDate = self.dataSource?.calendarViewMaxDate() else
         {
             return nil
         }
@@ -602,8 +853,7 @@ public class FAMCalendarViewController :UIViewController, UICollectionViewDelega
         let compareMax :NSComparisonResult = maxDate.compare(date!)
         if compareMin == .OrderedAscending && compareMax == .OrderedDescending
         {
-            let totalMonths :Int = NSDate.totalMonths(minDate, maxDate: date!)
-            return NSIndexPath(forRow: totalMonths, inSection: 0)
+            return NSIndexPath(forRow: NSDate.totalMonths(minDate, maxDate: date!) - 1, inSection: 0)
         } else if (compareMin == .OrderedDescending)
         {
             return NSIndexPath(forRow: 0, inSection: 0)
@@ -613,14 +863,14 @@ public class FAMCalendarViewController :UIViewController, UICollectionViewDelega
         }
     }
 
-    private func _moveToIndexPath(indexPath :NSIndexPath) -> Void
+    private func _moveToIndexPath(indexPath :NSIndexPath, animated: Bool) -> Void
     {
         if 0 > indexPath.row || indexPath.row >= self.collectionView.numberOfItemsInSection(indexPath.section)
         {
             return
         }
 
-        self.collectionView.scrollToItemAtIndexPath(indexPath, atScrollPosition: .CenteredHorizontally, animated: true)
+        self.collectionView.scrollToItemAtIndexPath(indexPath, atScrollPosition: .CenteredHorizontally, animated: animated)
     }
 
     //MARK: UICollectionViewDelegate UIColelctionViewDataSource
@@ -636,10 +886,10 @@ public class FAMCalendarViewController :UIViewController, UICollectionViewDelega
         let cell :FAMCalendarViewCollectionViewCell = collectionView.dequeueReusableCellWithReuseIdentifier(FAMCalendarViewCollectionViewCell.cellIdentifier, forIndexPath: indexPath) as! FAMCalendarViewCollectionViewCell
         cell.calendarView.contentInset = self._contentInset
         cell.calendarView.prev = {
-            self._moveToIndexPath(NSIndexPath(forRow: indexPath.row - 1, inSection: indexPath.section))
+            self._moveToIndexPath(NSIndexPath(forRow: indexPath.row - 1, inSection: indexPath.section), animated: true)
         }
         cell.calendarView.forward = {
-            self._moveToIndexPath(NSIndexPath(forRow: indexPath.row + 1, inSection: indexPath.section))
+            self._moveToIndexPath(NSIndexPath(forRow: indexPath.row + 1, inSection: indexPath.section), animated: true)
         }
         cell.calendarView.didSelect = { (completion :FAMCalendarViewBlocks) in
             self.close(completion)
@@ -649,7 +899,54 @@ public class FAMCalendarViewController :UIViewController, UICollectionViewDelega
         cell.dataSource = self.dataSource
         return cell
     }
-    
+
+    //MARK: FAMCalendarYearsCollectionViewDelegate
+    func calendarYearsView(calendarYearsView view: FAMCalendarYearsCollectionView, didChangedYear year: Int) {
+        let date :NSDate = NSDate.date(fromYear: year, month: self.date.month(), day: self.date.day())
+        if let indexPath :NSIndexPath = self._indexPathFromDate(date)
+        {
+            self._moveToIndexPath(indexPath, animated: true)
+        }
+    }
+
+    //MARK: UIScrollViewDelegate
+    public func scrollViewDidEndDecelerating(scrollView: UIScrollView) {
+        self._scrollViewDidEndScrolling(scrollView)
+    }
+
+    public func scrollViewDidEndScrollingAnimation(scrollView: UIScrollView) {
+        self._scrollViewDidEndScrolling(scrollView)
+    }
+
+    public func scrollViewDidEndDragging(scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+        self._scrollViewDidEndScrolling(scrollView)
+    }
+
+    private func _scrollViewDidEndScrolling(scrollView :UIScrollView)
+    {
+        if scrollView.decelerating || scrollView.dragging || scrollView.tracking
+        {
+            return
+        }
+
+        guard let indexPath :NSIndexPath = self.collectionView.indexPathForItemAtPoint(scrollView.contentOffset) else
+        {
+            return
+        }
+        guard let date :NSDate = self._dateFromIndexPath(indexPath) else
+        {
+            return
+        }
+
+        let lastYear :Int = self.date.year()
+        self.date = date
+        let currentYear :Int = self.date.year()
+        if lastYear != currentYear
+        {
+            self.yearsCollectionView.year = currentYear
+        }
+    }
+
     //MARK: deinit
     deinit
     {
@@ -658,6 +955,8 @@ public class FAMCalendarViewController :UIViewController, UICollectionViewDelega
         self.delegate = nil
     }
 }
+
+//MARK: navigationController
 
 public class FAMCalendarNavigationController :UINavigationController
 {

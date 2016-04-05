@@ -44,11 +44,14 @@ public enum FAMCalendarWeekDay :Int
 public protocol NSDateFAMCalendarViewProtocol
 {
     func dateFromIndexPath(indexPath :NSIndexPath) -> NSDate?
+    func year() -> Int
+    func month() -> Int
     func day() -> Int
     func isEqual(toYear year :Int, month :Int) -> Bool
     func formatedString(format :String) -> String
     static func date(fromYear year :Int, month :Int, day :Int) -> NSDate
     static func totalMonths(minDate :NSDate, maxDate :NSDate) -> Int
+    static func yearsFromDates(startDate :NSDate, endDate :NSDate) -> [Int]
 }
 
 extension NSDate :NSDateFAMCalendarViewProtocol
@@ -66,7 +69,21 @@ extension NSDate :NSDateFAMCalendarViewProtocol
         comp2.month       = comp1.month
         return calendar.dateFromComponents(comp2)
     }
-    
+
+    public func year() -> Int {
+        let calendar :NSCalendar = NSCalendar.currentCalendar()
+        calendar.locale = NSLocale.systemLocale()
+        calendar.timeZone = NSTimeZone.systemTimeZone()
+        return calendar.component(.Year, fromDate: self)
+    }
+
+    public func month() -> Int {
+        let calendar :NSCalendar = NSCalendar.currentCalendar()
+        calendar.locale = NSLocale.systemLocale()
+        calendar.timeZone = NSTimeZone.systemTimeZone()
+        return calendar.component(.Month, fromDate: self)
+    }
+
     public func day() -> Int {
         let calendar :NSCalendar = NSCalendar.currentCalendar()
         calendar.locale = NSLocale.systemLocale()
@@ -102,12 +119,24 @@ extension NSDate :NSDateFAMCalendarViewProtocol
     }
 
     public static func totalMonths(minDate: NSDate, maxDate: NSDate) -> Int {
-        let minComp :NSDateComponents = NSCalendar.currentCalendar().components([.Year, .Month, .Day], fromDate: minDate)
-        let maxComp :NSDateComponents = NSCalendar.currentCalendar().components([.Year, .Month, .Day], fromDate: maxDate)
+        let minComp :NSDateComponents = NSCalendar.currentCalendar().components([.Year, .Month], fromDate: minDate)
+        let maxComp :NSDateComponents = NSCalendar.currentCalendar().components([.Year, .Month], fromDate: maxDate)
 
         let totalYear :Int = maxComp.year - minComp.year
         let totalMonth :Int = maxComp.month - minComp.month
 
         return totalYear * 12 + totalMonth + 1
+    }
+
+    public static func yearsFromDates(startDate :NSDate, endDate :NSDate) -> [Int]
+    {
+        var result :[Int] = []
+        let startYear :Int = NSCalendar.currentCalendar().component(.Year, fromDate: startDate)
+        let endYear :Int = NSCalendar.currentCalendar().component(.Year, fromDate: endDate)
+        for year in startYear...endYear
+        {
+            result.append(year)
+        }
+        return result
     }
 }
